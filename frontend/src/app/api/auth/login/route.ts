@@ -3,6 +3,18 @@
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // ensure no caching of this route
+
+// ✅ Demo / fallback credentials so login works even if Vercel envs are missing
+const FALLBACK_ADMIN = {
+  email: (process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@hydropak.pk').toLowerCase(),
+  password: (process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || 'Admin@123'),
+};
+
+// Optional dev flag (if you later want to allow any login)
+const DEMO_MODE =
+  (process.env.ALLOW_DEV_AUTH === 'true') ||
+  (process.env.NEXT_PUBLIC_ALLOW_DEV_AUTH === 'true');
 
 // add this helper GET so you can ping the route
 export async function GET() {
@@ -57,28 +69,19 @@ export async function POST(req: Request) {
   const email = String(body?.email ?? '').trim().toLowerCase();
   const password = String(body?.password ?? '').trim();
 
-  // Read from env (configure these in Vercel)
-  const adminEmail = String(process.env.SEED_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? '').trim().toLowerCase();
-  const adminPassword = String(process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '').trim();
-
-  console.log('AUTH_LOGIN_DEBUG', {
-    hasAdminVars: Boolean(adminEmail && adminPassword),
-    allowDevAuth: process.env.ALLOW_DEV_AUTH === 'true',
-    vercelEnv: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
-    });
-
-  // Allow everything in preview/dev if the flag is on (set ALLOW_DEV_AUTH=true in Vercel)
-  if ((process.env.ALLOW_DEV_AUTH ?? '').toLowerCase() === 'true') {
+  // Allow everything when explicitly in demo mode
+  if (DEMO_MODE) {
     const payload = { sub: email || 'dev@example.com', name: 'Dev', role: 'ADMIN' };
-    const token = `demo.${b64url(JSON.stringify(payload))}.token`;
+    const token = `demo.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.token`;
     return NextResponse.json({ token, user: payload }, { status: 200 });
   }
 
-  if (!adminEmail || !adminPassword) {
-    return NextResponse.json(
-      { message: 'Server login is not configured. Set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD.' },
-      { status: 500 }
-    );
+  // ✅ Always fall back to these creds if envs aren't set on Vercel
+  const adminEmail = FALLBACK_ADMIN.email;
+  const adminPassword = FALLBACK_ADMIN.password;
+
+  if (!email || !password) {
+    return NextResponse.json({ message: 'Email and password are required.' }, { status: 400 });
   }
 
   if (email !== adminEmail || password !== adminPassword) {
@@ -86,7 +89,7 @@ export async function POST(req: Request) {
   }
 
   const payload = { sub: adminEmail, name: 'Admin', role: 'ADMIN' };
-  const token = `demo.${b64url(JSON.stringify(payload))}.token`;
-
+  const token = `demo.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.token`;
   return NextResponse.json({ token, user: payload }, { status: 200 });
 }
+
