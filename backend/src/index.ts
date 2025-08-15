@@ -1,6 +1,6 @@
 // backend/src/index.ts
 import 'dotenv/config';
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express, { type NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -66,9 +66,10 @@ app.use(
 app.options('*', cors());
 
 // ---- Healthcheck -----------------------------------------------------------
-app.get('/health', (_req: Request, res: Response) => {
+app.get('/health', (_req: express.Request, res: express.Response) => {
   res.status(200).json({ ok: true });
 });
+;
 
 // ---- Routes ----------------------------------------------------------------
 app.use('/api/auth', auth);
@@ -82,7 +83,9 @@ app.use('/api/deliveries', deliveries);
 app.use('/api/analytics', analytics);
 
 // 404 handler
-app.use((_req, res) => res.status(404).json({ message: 'Not Found' }));
+app.use((_req: express.Request, res: express.Response) => {
+  res.status(404).json({ message: 'Not Found' });
+});
 
 // Error handler (last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
