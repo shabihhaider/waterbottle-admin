@@ -1,0 +1,42 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: waterbottle_db
+    environment:
+      POSTGRES_DB: waterbottle
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_pass_123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d waterbottle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: node:20-bullseye
+    working_dir: /app
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://app_user:app_pass_123@db:5432/waterbottle?schema=public
+      - SHADOW_DATABASE_URL=postgresql://app_user:app_pass_123@db:5432/waterbottle_shadow?schema=public
+      - PGPASSWORD=app_pass_123
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      bash -c "
+        npm i -g pnpm@9 &&
+        pnpm install --no-frozen-lockfile &&
+        pnpm prisma generate &&
+        apt-get update && apt-get install -y postgresql-client &&
+        psql -h db -U app_user -d waterbottle -c 'CREATE DATABASE waterbottle_shadow;' || echo 'Shadow database already exists' &&
+        pnpm prisma migrate dev --name ${MIGRATION_NAME:-add_customer_status_rating_credit}
+      "
+
+volumes:
+  postgres_data:
