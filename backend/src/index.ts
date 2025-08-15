@@ -69,7 +69,6 @@ app.options('*', cors());
 app.get('/health', (_req: express.Request, res: express.Response) => {
   res.status(200).json({ ok: true });
 });
-;
 
 // ---- Routes ----------------------------------------------------------------
 app.use('/api/auth', auth);
@@ -83,7 +82,7 @@ app.use('/api/deliveries', deliveries);
 app.use('/api/analytics', analytics);
 
 // 404 handler
-app.use((_req: express.Request, res: express.Response) => {
+app.use((_req: express.Request, res: express.Response, _next: express.NextFunction) => {
   res.status(404).json({ message: 'Not Found' });
 });
 
