@@ -17,10 +17,13 @@ export type ApiOptions = {
 
 export type ApiErrorShape = { error?: any; message?: string } & Record<string, any>;
 
+const DEFAULT_API_BASE =
+  process.env.NODE_ENV === 'production' ? '/api' : 'http://127.0.0.1:5050/api';
+
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.NEXT_PUBLIC_API_URL ||
-  'http://127.0.0.1:5050/api'
+  DEFAULT_API_BASE
 ).replace(/\/$/, '');
 
 function buildQuery(params?: ApiOptions['query']): string {
