@@ -6,7 +6,20 @@ export const runtime = 'nodejs';
 
 // add this helper GET so you can ping the route
 export async function GET() {
-  return NextResponse.json({ ok: true }, { status: 200 });
+  const adminEmail = String(process.env.SEED_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? '').trim();
+  const adminPassword = String(process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '').trim();
+
+  return NextResponse.json(
+    {
+      ok: true,
+      config: {
+        allowDevAuth: process.env.ALLOW_DEV_AUTH === 'true',
+        hasAdminVars: Boolean(adminEmail && adminPassword),
+        vercelEnv: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown',
+      },
+    },
+    { status: 200 }
+  );
 }
 
 function b64url(s: string) {
@@ -48,6 +61,12 @@ export async function POST(req: Request) {
   // Read from env (configure these in Vercel)
   const adminEmail = String(process.env.SEED_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? '').trim().toLowerCase();
   const adminPassword = String(process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '').trim();
+
+  console.log('AUTH_LOGIN_DEBUG', {
+    hasAdminVars: Boolean(adminEmail && adminPassword),
+    allowDevAuth: process.env.ALLOW_DEV_AUTH === 'true',
+    vercelEnv: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
+    });
 
   // Allow everything in preview/dev if the flag is on (set ALLOW_DEV_AUTH=true in Vercel)
   if (process.env.ALLOW_DEV_AUTH === 'true') {
