@@ -4,6 +4,7 @@ import { verifyToken } from '../utils/auth';
 import { prisma } from '../prisma';
 import bcrypt from 'bcryptjs';
 
+const PUBLIC_API_PATHS = ['/api/auth/login'];
 declare global {
   namespace Express {
     interface Request {

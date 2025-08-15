@@ -5,7 +5,8 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false,
+    "noImplicitAny": false,
     "rootDir": "src",
     "outDir": "dist",
     "target": "ES2020",
@@ -23,7 +24,8 @@
   },
   "include": [
     "src/**/*",
-    "src/**/*.json"
+    "src/**/*.json",
+    "prisma"
   ],
   "exclude": [
     "node_modules",

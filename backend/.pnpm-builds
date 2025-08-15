@@ -1,0 +1,7 @@
+# Allow packages that need install/build scripts on Vercel
+@prisma/engines
+@prisma/client
+prisma
+esbuild
+puppeteer
+aws-sdk
