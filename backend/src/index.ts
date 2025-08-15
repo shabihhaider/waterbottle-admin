@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import express from 'express';
 import type { Request as ExRequest, Response as ExResponse, NextFunction } from 'express';
+import type { RequestHandler, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -67,9 +68,10 @@ app.use(
 app.options('*', cors());
 
 // ---- Healthcheck -----------------------------------------------------------
-app.get('/health', (_req: ExRequest, res: ExResponse) => {
+const healthHandler: RequestHandler = (_req, res) => {
   res.status(200).json({ ok: true });
-});
+};
+app.get('/health', healthHandler);
 
 // ---- Routes ----------------------------------------------------------------
 app.use('/api/auth', auth);
@@ -83,19 +85,21 @@ app.use('/api/deliveries', deliveries);
 app.use('/api/analytics', analytics);
 
 // 404 handler
-app.use((_req: ExRequest, res: ExResponse, _next: NextFunction) => {
+const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({ message: 'Not Found' });
-});
+};
+app.use(notFoundHandler);
 
 // Error handler (last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: unknown, _req: ExRequest, res: ExResponse, _next: NextFunction) => {
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   const e = err as { status?: number; message?: string; body?: unknown; stack?: string };
   const status = e?.status ?? 500;
   const message = e?.message ?? 'Internal Server Error';
   console.error('[ERROR]', status, message, e?.stack);
   res.status(status).json({ message, error: e?.body });
-});
+};
+app.use(errorHandler);
 
 // Bind explicitly to 127.0.0.1 (Windows friendliness)
 const HOST = process.env.HOST || '0.0.0.0';
