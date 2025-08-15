@@ -1,6 +1,13 @@
+// src/app/api/auth/login/route.ts
+
 import { NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
+
+// add this helper GET so you can ping the route
+export async function GET() {
+  return NextResponse.json({ ok: true }, { status: 200 });
+}
 
 function b64url(s: string) {
   return Buffer.from(s).toString('base64url');
@@ -41,6 +48,13 @@ export async function POST(req: Request) {
   // Read from env (configure these in Vercel)
   const adminEmail = String(process.env.SEED_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? '').trim().toLowerCase();
   const adminPassword = String(process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '').trim();
+
+  // Allow everything in preview/dev if the flag is on (set ALLOW_DEV_AUTH=true in Vercel)
+  if (process.env.ALLOW_DEV_AUTH === 'true') {
+    const payload = { sub: email || 'dev@example.com', name: 'Dev', role: 'ADMIN' };
+    const token = `demo.${b64url(JSON.stringify(payload))}.token`;
+    return NextResponse.json({ token, user: payload }, { status: 200 });
+  }
 
   if (!adminEmail || !adminPassword) {
     return NextResponse.json(
