@@ -6,16 +6,15 @@ export const runtime = 'nodejs';
 
 // add this helper GET so you can ping the route
 export async function GET() {
-  const adminEmail = String(process.env.SEED_ADMIN_EMAIL ?? process.env.ADMIN_EMAIL ?? '').trim();
-  const adminPassword = String(process.env.SEED_ADMIN_PASSWORD ?? process.env.ADMIN_PASSWORD ?? '').trim();
-
   return NextResponse.json(
     {
       ok: true,
       config: {
-        allowDevAuth: process.env.ALLOW_DEV_AUTH === 'true',
-        hasAdminVars: Boolean(adminEmail && adminPassword),
-        vercelEnv: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'unknown',
+        allowDevAuth: process.env.ALLOW_DEV_AUTH ?? '(unset)',
+        hasAdminEmail: Boolean(process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_EMAIL),
+        hasAdminPassword: Boolean(process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD),
+        env: process.env.VERCEL_ENV || process.env.NODE_ENV,
+        runtime: process.env.NEXT_RUNTIME || 'node',
       },
     },
     { status: 200 }
@@ -69,7 +68,7 @@ export async function POST(req: Request) {
     });
 
   // Allow everything in preview/dev if the flag is on (set ALLOW_DEV_AUTH=true in Vercel)
-  if (process.env.ALLOW_DEV_AUTH === 'true') {
+  if ((process.env.ALLOW_DEV_AUTH ?? '').toLowerCase() === 'true') {
     const payload = { sub: email || 'dev@example.com', name: 'Dev', role: 'ADMIN' };
     const token = `demo.${b64url(JSON.stringify(payload))}.token`;
     return NextResponse.json({ token, user: payload }, { status: 200 });
