@@ -1,6 +1,7 @@
 // backend/src/index.ts
 import 'dotenv/config';
-import express, { type NextFunction } from 'express';
+import express from 'express';
+import type { Request as ExRequest, Response as ExResponse, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -66,7 +67,7 @@ app.use(
 app.options('*', cors());
 
 // ---- Healthcheck -----------------------------------------------------------
-app.get('/health', (_req: express.Request, res: express.Response) => {
+app.get('/health', (_req: ExRequest, res: ExResponse) => {
   res.status(200).json({ ok: true });
 });
 
@@ -82,18 +83,18 @@ app.use('/api/deliveries', deliveries);
 app.use('/api/analytics', analytics);
 
 // 404 handler
-app.use((_req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((_req: ExRequest, res: ExResponse, _next: NextFunction) => {
   res.status(404).json({ message: 'Not Found' });
 });
 
 // Error handler (last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  const status = err?.status || 500;
-  const message = err?.message || 'Internal Server Error';
-  const body = err?.body;
-  console.error('[ERROR]', status, message, err?.stack);
-  res.status(status).json({ message, error: body });
+app.use((err: unknown, _req: ExRequest, res: ExResponse, _next: NextFunction) => {
+  const e = err as { status?: number; message?: string; body?: unknown; stack?: string };
+  const status = e?.status ?? 500;
+  const message = e?.message ?? 'Internal Server Error';
+  console.error('[ERROR]', status, message, e?.stack);
+  res.status(status).json({ message, error: e?.body });
 });
 
 // Bind explicitly to 127.0.0.1 (Windows friendliness)
