@@ -1,7 +1,7 @@
 // backend/src/index.ts
 import 'dotenv/config';
 import express from 'express';
-import type { Request as ExRequest, Response as ExResponse, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import type { RequestHandler, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
