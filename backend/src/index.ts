@@ -67,7 +67,8 @@ app.options('*', cors());
 
 // ---- Healthcheck -----------------------------------------------------------
 app.get('/health', (_req, res) => {
-  (res as any).status(200).json({ ok: true });
+  res.statusCode = 200;
+  res.json({ ok: true });
 });
 
 // ---- Routes ----------------------------------------------------------------
@@ -83,7 +84,8 @@ app.use('/api/analytics', analytics);
 
 // 404 handler
 app.use((_req, res) => {
-  (res as any).status(404).json({ message: 'Not Found' });
+  res.statusCode = 404;
+  res.json({ message: 'Not Found' });
 });
 
 // Error handler (last)
@@ -92,7 +94,8 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   const status = e?.status ?? 500;
   const message = e?.message ?? 'Internal Server Error';
   console.error('[ERROR]', status, message, e?.stack);
-  (res as any).status(status).json({ message, error: e?.body });
+  res.statusCode = status;
+  res.json({ message, error: e?.body });
 });
 
 // Bind explicitly to 127.0.0.1 (Windows friendliness)
