@@ -3,8 +3,23 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
-import type { Prisma, $Enums } from '@prisma/client';
-type CustomerModel = Prisma.CustomerGetPayload<{}>;
+// Local types to avoid importing Prisma types
+type CustomerStatusUI = 'active' | 'inactive' | 'vip';
+type DbCustomerStatus = 'ACTIVE' | 'INACTIVE' | 'VIP';
+
+// Minimal Customer shape used by shapeCustomer()
+type CustomerModel = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  createdAt: Date;
+  status: DbCustomerStatus;
+  rating: number | null;
+  notes: string | null;
+  creditLimit: unknown; // Prisma.Decimal | number; we coerce with Number()
+};
 
 
 
@@ -26,11 +41,10 @@ const customerSchema = z.object({
   creditLimit: z.coerce.number().nonnegative().optional(),
 });
 
-const toDbStatus = (s?: z.infer<typeof StatusUI>): $Enums.CustomerStatus | undefined =>
-  s ? (s.toUpperCase() as $Enums.CustomerStatus) : undefined;
-const toUiStatus = (s: $Enums.CustomerStatus) =>
-  s.toLowerCase() as 'active' | 'inactive' | 'vip';
-
+const toDbStatus = (s?: z.infer<typeof StatusUI>): DbCustomerStatus | undefined =>
+   s ? (s.toUpperCase() as DbCustomerStatus) : undefined;
+ const toUiStatus = (s: DbCustomerStatus) =>
+   s.toLowerCase() as CustomerStatusUI;
 
 // Shape DB -> UI model expected by the frontend Customers page
 function shapeCustomer(
@@ -63,15 +77,15 @@ function shapeCustomer(
 router.get('/', async (req, res, next) => {
   try {
     const { q } = req.query as { q?: string };
-    const where: Prisma.CustomerWhereInput = q
-      ? {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            { phone: { contains: q } },
-            { email: { contains: q, mode: 'insensitive' } },
-          ],
-        }
-      : {};
+    const where = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { phone: { contains: q } },
+          { email: { contains: q, mode: 'insensitive' } },
+        ],
+      }
+      : {} as any;
 
     const customers = await prisma.customer.findMany({ where, orderBy: { createdAt: 'desc' } });
     if (customers.length === 0) return res.json([]);
@@ -149,7 +163,7 @@ router.post('/', async (req, res, next) => {
         city: d.city ?? null,
         notes: d.notes ?? null,
         urduName: d.urduName ?? null,
-        status: toDbStatus(d.status) ?? ('ACTIVE' as $Enums.CustomerStatus),
+        status: toDbStatus(d.status) ?? ('ACTIVE' as DbCustomerStatus),
         rating: d.rating ?? 0,
         creditLimit: d.creditLimit ?? 0,
       },
