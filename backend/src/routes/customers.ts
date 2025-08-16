@@ -3,7 +3,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
-import type { Prisma, Customer, CustomerStatus } from '@prisma/client';
+import type { Prisma, $Enums } from '@prisma/client';
+type CustomerModel = Prisma.CustomerGetPayload<{}>;
+
 
 
 const router = Router();
@@ -24,18 +26,21 @@ const customerSchema = z.object({
   creditLimit: z.coerce.number().nonnegative().optional(),
 });
 
-const toDbStatus = (s?: z.infer<typeof StatusUI>): CustomerStatus | undefined =>
-  s ? (s.toUpperCase() as CustomerStatus) : undefined;
-const toUiStatus = (s: CustomerStatus) => s.toLowerCase() as 'active' | 'inactive' | 'vip';
+const toDbStatus = (s?: z.infer<typeof StatusUI>): $Enums.CustomerStatus | undefined =>
+  s ? (s.toUpperCase() as $Enums.CustomerStatus) : undefined;
+const toUiStatus = (s: $Enums.CustomerStatus) =>
+  s.toLowerCase() as 'active' | 'inactive' | 'vip';
+
 
 // Shape DB -> UI model expected by the frontend Customers page
 function shapeCustomer(
-  c: Customer,
+  c: CustomerModel,
   orderCount: number,
   lastOrderAt: Date | null,
   spent: number,
   outstanding: number
 ) {
+
   return {
     id: c.id,
     name: c.name,
@@ -144,7 +149,7 @@ router.post('/', async (req, res, next) => {
         city: d.city ?? null,
         notes: d.notes ?? null,
         urduName: d.urduName ?? null,
-        status: toDbStatus(d.status) ?? 'ACTIVE',
+        status: toDbStatus(d.status) ?? ('ACTIVE' as $Enums.CustomerStatus),
         rating: d.rating ?? 0,
         creditLimit: d.creditLimit ?? 0,
       },
