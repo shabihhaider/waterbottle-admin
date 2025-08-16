@@ -21,7 +21,8 @@
     "noEmitOnError": true,
     "removeComments": true,
     "typeRoots": ["./node_modules/@types"],
-    "types": ["node"]
+    "types": ["node"],
+    "skipDefaultLibCheck": true
   },
   "include": [
     "src/**/*",
