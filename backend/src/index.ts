@@ -1,6 +1,7 @@
 // backend/src/index.ts
 import 'dotenv/config';
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express from 'express';
+import type { Request as ExpressRequest, Response as ExpressResponse, NextFunction as ExpressNextFunction } from 'express';
 import type { RequestHandler, ErrorRequestHandler } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -67,7 +68,7 @@ app.use(
 app.options('*', cors());
 
 // ---- Healthcheck -----------------------------------------------------------
-const healthHandler: RequestHandler = (_req: Request, res: Response) => {
+const healthHandler: RequestHandler = (_req: ExpressRequest, res: ExpressResponse) => {
   res.status(200).json({ ok: true });
 };
 app.get('/health', healthHandler);
@@ -84,14 +85,14 @@ app.use('/api/deliveries', deliveries);
 app.use('/api/analytics', analytics);
 
 // 404 handler
-const notFoundHandler: RequestHandler = (_req: Request, res: Response) => {
+const notFoundHandler: RequestHandler = (_req: ExpressRequest, res: ExpressResponse) => {
   res.status(404).json({ message: 'Not Found' });
 };
 app.use(notFoundHandler);
 
 // Error handler (last)
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const errorHandler: ErrorRequestHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
+const errorHandler: ErrorRequestHandler = (err: any, _req: ExpressRequest, res: ExpressResponse, _next: ExpressNextFunction) => {
   const e = err as { status?: number; message?: string; body?: unknown; stack?: string };
   const status = e?.status ?? 500;
   const message = e?.message ?? 'Internal Server Error';
