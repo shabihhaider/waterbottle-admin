@@ -3,7 +3,12 @@ import { Router } from 'express';
 import dayjs from 'dayjs';
 import { requireAuth } from '../middleware/auth';
 import { prisma } from '../prisma'; // <- use your existing helper
-import type { OrderStatus } from '@prisma/client';
+type OrderStatus =
+  | 'PENDING'
+  | 'SCHEDULED'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'CANCELLED';
 
 const router = Router();
 router.use(requireAuth);
