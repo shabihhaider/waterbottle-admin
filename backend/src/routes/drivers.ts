@@ -3,7 +3,8 @@
 // ---------------------------------------------
 import { Router } from 'express';
 import { z } from 'zod';
-import type { Prisma } from '@prisma/client';
+type DriverCreateData = NonNullable<Parameters<typeof prisma.driver.create>[0]>['data'];
+type DriverUpdateData = NonNullable<Parameters<typeof prisma.driver.update>[0]>['data'];
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
 
@@ -49,7 +50,7 @@ router.post('/', async (req, res, next) => {
     const body = driverCreateSchema.parse(req.body);
 
     // Ensure exact Prisma shape: phone?: string | null
-    const data: Prisma.DriverCreateInput = {
+    const data: DriverCreateData = {
       name: body.name,
       phone: body.phone ?? null,
     };
@@ -67,7 +68,7 @@ router.put('/:id', async (req, res, next) => {
     const body = driverUpdateSchema.parse(req.body);
 
     // Build update payload only with provided fields
-    const data: Prisma.DriverUpdateInput = {
+    const data: DriverUpdateData = {
       ...(body.name !== undefined ? { name: body.name } : {}),
       ...(body.phone !== undefined ? { phone: body.phone } : {}),
     };
