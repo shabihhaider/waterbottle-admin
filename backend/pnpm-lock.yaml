@@ -47,6 +47,9 @@ importers:
       pdf-lib:
         specifier: ^1.17.1
         version: 1.17.1
+      prisma:
+        specifier: ^6.14.0
+        version: 6.14.0(typescript@5.9.2)
       puppeteer:
         specifier: ^24.16.1
         version: 24.16.2(typescript@5.9.2)
@@ -72,9 +75,6 @@ importers:
       '@types/node':
         specifier: ^20.11.24
         version: 20.19.11
-      prisma:
-        specifier: ^6.14.0
-        version: 6.14.0(typescript@5.9.2)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@20.19.11)(typescript@5.9.2)
