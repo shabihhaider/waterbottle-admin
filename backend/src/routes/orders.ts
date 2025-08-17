@@ -4,7 +4,8 @@ import { z } from 'zod';
 import dayjs from 'dayjs';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
-import type { Prisma } from '@prisma/client';
+type OrderFindManyArgs = NonNullable<Parameters<typeof prisma.order.findMany>[0]>;
+type OrderWhereInput = NonNullable<OrderFindManyArgs['where']>;
 
 const router = Router();
 router.use(requireAuth);
@@ -54,7 +55,7 @@ router.get('/', async (req, res, next) => {
       customerId?: string;
     };
 
-    const where: Prisma.OrderWhereInput = {};
+    const where: OrderWhereInput = {};
 
     if (customerId) where.customerId = customerId;
 
