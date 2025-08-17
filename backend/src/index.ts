@@ -32,9 +32,8 @@ const PORT = Number(env.PORT || 5050);
 // const FRONTEND_ORIGIN_ALT = env.FRONTEND_ORIGIN_ALT || 'http://127.0.0.1:3000';
 
 const FRONTEND_ORIGIN = env.FRONTEND_ORIGIN || 'http://localhost:3000';
-const FRONTEND_ORIGIN_ALT = env.FRONTEND_ORIGIN_ALT || 'http://127.0.0.1:3000';
-const FRONTEND_ORIGIN_PROD = process.env.FRONTEND_ORIGIN_PROD; // e.g. https://your-frontend.vercel.app
-
+const FRONTEND_ORIGIN_ALT = env.FRONTEND_ORIGIN_ALT || 'http://localhost:5173';
+const FRONTEND_ORIGIN_PROD = process.env.FRONTEND_ORIGIN_PROD || 'https://waterbottle-admin-inzmu4v0l-shabihhaiders-projects.vercel.app';
 console.log('Booting API with env:', { PORT, FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT });
 
 // ---- App -------------------------------------------------------------------
@@ -56,10 +55,8 @@ app.use(
       const allowed = [FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT, FRONTEND_ORIGIN_PROD].filter(Boolean);
       cb(null, allowed.includes(origin));
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['Content-Disposition'],
+    credentials: false, // ✅ you use Bearer tokens, not cookies
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Debug-User', 'X-Debug-Email'],
   })
 );
 // Handle preflight globally
