@@ -3,7 +3,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
-import type { Prisma } from '@prisma/client';
+type ProductFindManyArgs = NonNullable<Parameters<typeof prisma.product.findMany>[0]>;
+type ProductWhereInput = NonNullable<ProductFindManyArgs['where']>;
 
 const router = Router();
 router.use(requireAuth);
@@ -52,7 +53,7 @@ router.get('/', async (req, res, next) => {
       supplierId?: string;
     };
 
-    const where: Prisma.ProductWhereInput = {};
+    const where: ProductWhereInput = {};
     if (q) {
       where.OR = [
         { name: { contains: q, mode: 'insensitive' } },
