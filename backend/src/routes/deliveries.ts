@@ -4,7 +4,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import dayjs from 'dayjs';
-import type { Prisma, DeliveryStatus as PrismaDeliveryStatus, $Enums } from '@prisma/client';
+type DeliveryFindManyArgs = NonNullable<Parameters<typeof prisma.delivery.findMany>[0]>;
+type DeliveryWhereInput = NonNullable<DeliveryFindManyArgs['where']>;
+type DeliveryUpdateArgs = NonNullable<Parameters<typeof prisma.delivery.update>[0]>;
+type DeliveryUpdateData = DeliveryUpdateArgs['data'];
+type PrismaDeliveryStatus = 'SCHEDULED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED';
+type OrderStatus = 'PENDING' | 'SCHEDULED' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
 
@@ -43,7 +48,7 @@ routerD.get('/', async (req, res, next) => {
       q?: string; status?: string; driverId?: string; from?: string; to?: string;
     };
 
-    const where: Prisma.DeliveryWhereInput = {};
+    const where: DeliveryWhereInput = {};
 
     if (driverId) where.driverId = driverId;
 
@@ -59,7 +64,7 @@ routerD.get('/', async (req, res, next) => {
 
     if (q && q.trim()) {
       const num = Number(q);
-      const or: Prisma.DeliveryWhereInput['OR'] = [
+      const or: DeliveryWhereInput['OR'] = [
         ...(Number.isFinite(num) ? [{ deliveryNumber: num }, { order: { orderNumber: num } }] : []),
         { order: { customer: { name: { contains: q, mode: 'insensitive' } } } },
         { address: { contains: q, mode: 'insensitive' } },
@@ -152,7 +157,7 @@ routerD.put('/:id', async (req, res, next) => {
 
     const { driverId, scheduledDate, notes, address } = parsed.data;
 
-    const data: Prisma.DeliveryUpdateInput = {
+    const data: DeliveryUpdateData = {
       ...(driverId === undefined
         ? {}
         : driverId === null || driverId === ''
@@ -199,7 +204,7 @@ routerD.put('/:id/status', async (req, res, next) => {
         include: includeDelivery,
       });
 
-      const orderStatusMap: Record<PrismaDeliveryStatus, $Enums.OrderStatus> = {
+      const orderStatusMap: Record<PrismaDeliveryStatus, OrderStatus> = {
         SCHEDULED: 'SCHEDULED',
         OUT_FOR_DELIVERY: 'OUT_FOR_DELIVERY',
         DELIVERED: 'DELIVERED',
