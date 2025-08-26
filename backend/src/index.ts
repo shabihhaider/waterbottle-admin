@@ -53,16 +53,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin(origin, cb) {
-      if (!origin) return cb(null, true); // SSR/CLI/postman
-      const allowed = [FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT, FRONTEND_ORIGIN_PROD].filter(Boolean);
-      if (allowed.includes(origin)) {
+      if (!origin) return cb(null, true); // SSR/postman etc.
+
+      // Allow any vercel deployment URL ending with your project name
+      const allowedPattern = /\.vercel\.app$/;
+      if (allowedPattern.test(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
         cb(null, true);
       } else {
-        console.warn("❌ Blocked CORS request from:", origin);
-        cb(new Error("Not allowed by CORS"));
+        console.warn('❌ Blocked CORS request from:', origin);
+        cb(new Error('Not allowed by CORS'));
       }
     },
-    credentials: false, // ✅ correct if you’re only using Bearer tokens
+    credentials: true, // if using cookies
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Debug-User', 'X-Debug-Email'],
   })
 );
