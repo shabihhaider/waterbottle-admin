@@ -33,7 +33,9 @@ const PORT = Number(env.PORT || 5050);
 
 const FRONTEND_ORIGIN = env.FRONTEND_ORIGIN || 'http://localhost:3000';
 const FRONTEND_ORIGIN_ALT = env.FRONTEND_ORIGIN_ALT || 'http://localhost:5173';
-const FRONTEND_ORIGIN_PROD = process.env.FRONTEND_ORIGIN_PROD || 'https://waterbottle-admin-inzmu4v0l-shabihhaiders-projects.vercel.app';
+const FRONTEND_ORIGIN_PROD =
+  process.env.FRONTEND_ORIGIN_PROD || 'https://waterbottle-admin.vercel.app';
+
 console.log('Booting API with env:', { PORT, FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT });
 
 // ---- App -------------------------------------------------------------------
@@ -53,12 +55,18 @@ app.use(
     origin(origin, cb) {
       if (!origin) return cb(null, true); // SSR/CLI/postman
       const allowed = [FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT, FRONTEND_ORIGIN_PROD].filter(Boolean);
-      cb(null, allowed.includes(origin));
+      if (allowed.includes(origin)) {
+        cb(null, true);
+      } else {
+        console.warn("❌ Blocked CORS request from:", origin);
+        cb(new Error("Not allowed by CORS"));
+      }
     },
-    credentials: false, // ✅ you use Bearer tokens, not cookies
+    credentials: false, // ✅ correct if you’re only using Bearer tokens
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Debug-User', 'X-Debug-Email'],
   })
 );
+
 // Handle preflight globally
 app.options('*', cors());
 
