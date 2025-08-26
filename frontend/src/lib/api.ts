@@ -20,14 +20,11 @@ export type ApiErrorShape = { error?: any; message?: string } & Record<string, a
 const DEFAULT_API_ORIGIN =
   process.env.NODE_ENV === 'production' ? '' : 'http://127.0.0.1:5050';
 
-const API_ORIGIN = (
+const API_BASE = (
   process.env.NEXT_PUBLIC_API_BASE ||
   process.env.NEXT_PUBLIC_API_URL ||
   DEFAULT_API_ORIGIN
 ).replace(/\/+$/, '');
-
-// const API_BASE = `${API_ORIGIN}/api`;
-const API_BASE = API_ORIGIN;
 
 function buildQuery(params?: ApiOptions['query']): string {
   if (!params) return '';
