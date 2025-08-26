@@ -26,7 +26,8 @@ const API_ORIGIN = (
   DEFAULT_API_ORIGIN
 ).replace(/\/+$/, '');
 
-const API_BASE = `${API_ORIGIN}/api`;
+// const API_BASE = `${API_ORIGIN}/api`;
+const API_BASE = API_ORIGIN;
 
 function buildQuery(params?: ApiOptions['query']): string {
   if (!params) return '';
