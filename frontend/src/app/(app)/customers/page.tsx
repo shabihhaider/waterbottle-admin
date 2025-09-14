@@ -34,6 +34,7 @@ interface Customer {
   notes?: string;
   creditLimit: number;
   outstandingBalance: number;
+  customerType?: "regular" | "package";
 }
 
 /********************* Safe helpers *********************/
@@ -56,6 +57,7 @@ const EMPTY_CUSTOMER: Customer = {
   joinDate: new Date().toISOString(),
   creditLimit: 0,
   outstandingBalance: 0,
+  customerType: "regular",
 };
 
 const sanitizeCustomer = (c: Partial<Customer> | undefined | null): Customer => ({
@@ -74,6 +76,7 @@ const sanitizeCustomer = (c: Partial<Customer> | undefined | null): Customer => 
   notes: c?.notes ? toStr(c.notes) : undefined,
   creditLimit: numOr0(c?.creditLimit),
   outstandingBalance: numOr0(c?.outstandingBalance),
+  customerType: c?.customerType === "package" ? "package" : "regular",
 });
 
 /********************* UI Helpers (single source) *********************/
@@ -138,6 +141,7 @@ export default function CustomersPage() {
     address: "",
     creditLimit: 0,
     notes: "",
+    customerType: "regular",
   });
 
   const loadCustomers = async () => {
@@ -227,6 +231,7 @@ export default function CustomersPage() {
         address: formData.address?.trim() || undefined,
         creditLimit: toNum(formData.creditLimit),
         notes: formData.notes?.trim() || undefined,
+        customerType: formData.customerType,
         // status/rating are optional in backend and have defaults,
         // so we omit them to avoid validation errors.
       };
@@ -247,6 +252,7 @@ export default function CustomersPage() {
         address: '',
         creditLimit: 0,
         notes: '',
+        customerType: 'regular',
       });
       await loadCustomers();
     } catch (err: any) {
@@ -491,6 +497,7 @@ function TableView({
               <th className="text-left p-4 font-medium">Customer</th>
               <th className="text-left p-4 font-medium">Contact</th>
               <th className="text-left p-4 font-medium">Status</th>
+              <th className="text-left p-4 font-medium">Type</th>
               <th className="text-left p-4 font-medium">Orders</th>
               <th className="text-left p-4 font-medium">Total Spent</th>
               <th className="text-left p-4 font-medium">Outstanding</th>
@@ -532,7 +539,17 @@ function TableView({
                   </div>
                 </td>
                 <td className="p-4">
-                  <StatusBadge status={c.status} />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={c.status} />
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                      {(c.customerType ?? "regular").toUpperCase()}
+                    </span>
+                  </div>
+                </td>
+                <td className="p-4">
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    {(c.customerType ?? "regular").toUpperCase()}
+                  </span>
                 </td>
                 <td className="p-4">
                   <div className="font-medium">{fmtInt(c.totalOrders)}</div>
@@ -743,6 +760,18 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
               placeholder="Delivery address"
               rows={3}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Customer Type</label>
+            <select
+              value={formData.customerType}
+              onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="regular">Regular</option>
+              <option value="package">Package</option>
+            </select>
           </div>
 
           <div>
