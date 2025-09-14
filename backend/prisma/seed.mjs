@@ -14,6 +14,7 @@ async function main() {
       rating: 5,
       creditLimit: 50000.00,
       notes: 'VIP office client; weekly deliveries',
+      customerType: 'REGULAR',
     },
     {
       name: 'Lahore Fresh',
@@ -24,6 +25,7 @@ async function main() {
       rating: 4,
       creditLimit: 25000.00,
       notes: 'Prefers morning slot',
+      customerType: 'REGULAR',
     },
     {
       name: 'Islamabad Springs',
@@ -34,6 +36,7 @@ async function main() {
       rating: 5,
       creditLimit: 100000.00,
       notes: 'High volume corporate account',
+      customerType: 'REGULAR',
     },
     {
       name: 'Quetta Pure',
@@ -44,6 +47,7 @@ async function main() {
       rating: 2,
       creditLimit: 10000.00,
       notes: 'Inactive last 3 months',
+      customerType: 'REGULAR',
     },
     {
       name: 'Peshawar Aqua',
@@ -54,6 +58,7 @@ async function main() {
       rating: 3,
       creditLimit: 15000.00,
       notes: null,
+      customerType: 'REGULAR',
     },
   ];
 
@@ -69,6 +74,7 @@ async function main() {
         rating: c.rating,
         creditLimit: c.creditLimit,
         notes: c.notes,
+        customerType: c.customerType,
       },
       create: c,
     });

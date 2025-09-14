@@ -6,6 +6,7 @@ import { requireAuth } from '../middleware/auth';
 // Local types to avoid importing Prisma types
 type CustomerStatusUI = 'active' | 'inactive' | 'vip';
 type DbCustomerStatus = 'ACTIVE' | 'INACTIVE' | 'VIP';
+type DbCustomerType = 'REGULAR' | 'PACKAGE';
 
 // Minimal Customer shape used by shapeCustomer()
 type CustomerModel = {
@@ -19,6 +20,7 @@ type CustomerModel = {
   rating: number | null;
   notes: string | null;
   creditLimit: unknown; // Prisma.Decimal | number; we coerce with Number()
+  customerType: DbCustomerType;
 };
 
 
@@ -28,6 +30,7 @@ router.use(requireAuth);
 
 // --- Zod schema accepts UI-friendly values, we'll coerce to DB types on write ---
 const StatusUI = z.enum(['active', 'inactive', 'vip']);
+const CustomerTypeUI = z.enum(['regular', 'package']);
 const customerSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional(),
@@ -39,12 +42,19 @@ const customerSchema = z.object({
   status: StatusUI.optional(),
   rating: z.coerce.number().int().min(0).max(5).optional(),
   creditLimit: z.coerce.number().nonnegative().optional(),
+  customerType: CustomerTypeUI.optional(),
 });
 
 const toDbStatus = (s?: z.infer<typeof StatusUI>): DbCustomerStatus | undefined =>
    s ? (s.toUpperCase() as DbCustomerStatus) : undefined;
  const toUiStatus = (s: DbCustomerStatus) =>
    s.toLowerCase() as CustomerStatusUI;
+
+const toDbCustomerType = (t?: z.infer<typeof CustomerTypeUI>): DbCustomerType | undefined =>
+  t ? (t.toUpperCase() as DbCustomerType) : undefined;
+
+const toUiCustomerType = (t: DbCustomerType) =>
+  (t.toLowerCase() as 'regular' | 'package');
 
 // Shape DB -> UI model expected by the frontend Customers page
 function shapeCustomer(
@@ -65,6 +75,7 @@ function shapeCustomer(
     totalSpent: spent,
     lastOrderDate: lastOrderAt ? new Date(lastOrderAt).toISOString() : undefined,
     status: toUiStatus(c.status),
+    customerType: toUiCustomerType(c.customerType),
     rating: c.rating ?? 0,
     joinDate: new Date(c.createdAt).toISOString(),
     notes: c.notes ?? undefined,
@@ -166,6 +177,7 @@ router.post('/', async (req, res, next) => {
         status: toDbStatus(d.status) ?? ('ACTIVE' as DbCustomerStatus),
         rating: d.rating ?? 0,
         creditLimit: d.creditLimit ?? 0,
+        customerType: toDbCustomerType(d.customerType) ?? 'REGULAR',
       },
     });
     res.json(created);
@@ -194,6 +206,7 @@ router.put('/:id', async (req, res, next) => {
         ...(d.status !== undefined ? { status: toDbStatus(d.status) } : {}),
         ...(d.rating !== undefined ? { rating: d.rating } : {}),
         ...(d.creditLimit !== undefined ? { creditLimit: d.creditLimit } : {}),
+        ...(d.customerType !== undefined ? { customerType: toDbCustomerType(d.customerType) } : {}),
       },
     });
     res.json(updated);

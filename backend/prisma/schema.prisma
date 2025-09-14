@@ -35,6 +35,11 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+enum CustomerType {
+  REGULAR
+  PACKAGE
+}
+
 enum CustomerStatus {
   ACTIVE
   INACTIVE
@@ -81,6 +86,7 @@ model Customer {
   status      CustomerStatus @default(ACTIVE)
   rating      Int            @default(0)
   creditLimit Decimal        @default(0) @db.Decimal(12, 2)
+  customerType CustomerType @default(REGULAR)
 
   orders   Order[]
   invoices Invoice[]
