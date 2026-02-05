@@ -1,8 +1,6 @@
-DO $$ 
-BEGIN
     -- Create enum if it doesn't exist
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'CustomerStatus') THEN
-        CREATE TYPE "CustomerStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'VIP');
+        CREATE TYPE "CustomerStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'PERMANENT');
     END IF;
     
     -- Add columns if they don't exist
@@ -12,6 +10,10 @@ BEGIN
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Customer' AND column_name = 'rating') THEN
         ALTER TABLE "Customer" ADD COLUMN rating INTEGER DEFAULT 0;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Customer' AND column_name = 'statusReason') THEN
+        ALTER TABLE "Customer" ADD COLUMN "statusReason" TEXT;
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'Customer' AND column_name = 'creditLimit') THEN

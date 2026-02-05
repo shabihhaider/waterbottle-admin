@@ -4,9 +4,9 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middleware/auth';
 // Local types to avoid importing Prisma types
-type CustomerStatusUI = 'active' | 'inactive' | 'vip';
-type DbCustomerStatus = 'ACTIVE' | 'INACTIVE' | 'VIP';
-type DbCustomerType = 'REGULAR' | 'PACKAGE';
+type CustomerStatusUI = 'active' | 'inactive' | 'permanent';
+type DbCustomerStatus = 'ACTIVE' | 'INACTIVE' | 'PERMANENT';
+type DbCustomerType = 'REGULAR' | 'VIP';
 
 // Minimal Customer shape used by shapeCustomer()
 type CustomerModel = {
@@ -19,6 +19,7 @@ type CustomerModel = {
   status: DbCustomerStatus;
   rating: number | null;
   notes: string | null;
+  statusReason: string | null;
   creditLimit: unknown; // Prisma.Decimal | number; we coerce with Number()
   customerType: DbCustomerType;
 };
@@ -29,8 +30,8 @@ const router = Router();
 router.use(requireAuth);
 
 // --- Zod schema accepts UI-friendly values, we'll coerce to DB types on write ---
-const StatusUI = z.enum(['active', 'inactive', 'vip']);
-const CustomerTypeUI = z.enum(['regular', 'package']);
+const StatusUI = z.enum(['active', 'inactive', 'permanent']);
+const CustomerTypeUI = z.enum(['regular', 'vip']);
 const customerSchema = z.object({
   name: z.string().min(2),
   phone: z.string().optional(),
@@ -38,6 +39,7 @@ const customerSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   notes: z.string().optional(),
+  statusReason: z.string().optional(),
   urduName: z.string().optional(),
   status: StatusUI.optional(),
   rating: z.coerce.number().int().min(0).max(5).optional(),
@@ -54,7 +56,7 @@ const toDbCustomerType = (t?: z.infer<typeof CustomerTypeUI>): DbCustomerType | 
   t ? (t.toUpperCase() as DbCustomerType) : undefined;
 
 const toUiCustomerType = (t: DbCustomerType) =>
-  (t.toLowerCase() as 'regular' | 'package');
+  (t.toLowerCase() as 'regular' | 'vip');
 
 // Shape DB -> UI model expected by the frontend Customers page
 function shapeCustomer(
@@ -76,9 +78,10 @@ function shapeCustomer(
     lastOrderDate: lastOrderAt ? new Date(lastOrderAt).toISOString() : undefined,
     status: toUiStatus(c.status),
     customerType: toUiCustomerType(c.customerType),
-    rating: c.rating ?? 0,
+    rating: 0, // Removed stars/rating as per request
     joinDate: new Date(c.createdAt).toISOString(),
     notes: c.notes ?? undefined,
+    statusReason: c.statusReason ?? undefined,
     creditLimit: Number(c.creditLimit ?? 0),
     outstandingBalance: outstanding,
   };
@@ -173,9 +176,10 @@ router.post('/', async (req, res, next) => {
         address: d.address ?? null,
         city: d.city ?? null,
         notes: d.notes ?? null,
+        statusReason: d.statusReason ?? null,
         urduName: d.urduName ?? null,
         status: toDbStatus(d.status) ?? ('ACTIVE' as DbCustomerStatus),
-        rating: d.rating ?? 0,
+        rating: 0, // Default to 0
         creditLimit: d.creditLimit ?? 0,
         customerType: toDbCustomerType(d.customerType) ?? 'REGULAR',
       },
@@ -202,6 +206,7 @@ router.put('/:id', async (req, res, next) => {
         ...(d.address !== undefined ? { address: d.address ?? null } : {}),
         ...(d.city !== undefined ? { city: d.city ?? null } : {}),
         ...(d.notes !== undefined ? { notes: d.notes ?? null } : {}),
+        ...(d.statusReason !== undefined ? { statusReason: d.statusReason ?? null } : {}),
         ...(d.urduName !== undefined ? { urduName: d.urduName ?? null } : {}),
         ...(d.status !== undefined ? { status: toDbStatus(d.status) } : {}),
         ...(d.rating !== undefined ? { rating: d.rating } : {}),

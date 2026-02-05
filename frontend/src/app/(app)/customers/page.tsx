@@ -28,13 +28,14 @@ interface Customer {
   totalOrders: number;
   totalSpent: number;
   lastOrderDate?: string;
-  status: "active" | "inactive" | "vip";
+  status: "active" | "inactive" | "permanent";
   rating: number;
   joinDate: string;
   notes?: string;
+  statusReason?: string;
   creditLimit: number;
   outstandingBalance: number;
-  customerType?: "regular" | "package";
+  customerType?: "regular" | "vip";
 }
 
 /********************* Safe helpers *********************/
@@ -52,7 +53,7 @@ const EMPTY_CUSTOMER: Customer = {
   name: "",
   totalOrders: 0,
   totalSpent: 0,
-  status: "inactive",
+  status: "active",
   rating: 0,
   joinDate: new Date().toISOString(),
   creditLimit: 0,
@@ -70,13 +71,14 @@ const sanitizeCustomer = (c: Partial<Customer> | undefined | null): Customer => 
   totalOrders: numOr0(c?.totalOrders),
   totalSpent: numOr0(c?.totalSpent),
   lastOrderDate: c?.lastOrderDate,
-  status: (c?.status as Customer["status"]) || "inactive",
-  rating: Math.max(0, Math.min(5, numOr0(c?.rating))),
+  status: (c?.status as Customer["status"]) || "active",
+  rating: 0,
   joinDate: toStr(c?.joinDate, new Date().toISOString()),
   notes: c?.notes ? toStr(c.notes) : undefined,
+  statusReason: c?.statusReason ? toStr(c.statusReason) : undefined,
   creditLimit: numOr0(c?.creditLimit),
   outstandingBalance: numOr0(c?.outstandingBalance),
-  customerType: c?.customerType === "package" ? "package" : "regular",
+  customerType: c?.customerType === "vip" ? "vip" : "regular",
 });
 
 /********************* UI Helpers (single source) *********************/
@@ -86,7 +88,7 @@ function StatusBadge({ status }: { status: Customer["status"] }) {
       "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
     inactive:
       "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200",
-    vip: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+    permanent: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
   };
   return (
     <span className={clsx("px-2 py-1 text-xs font-medium rounded-full", styles[status])}>
@@ -95,25 +97,7 @@ function StatusBadge({ status }: { status: Customer["status"] }) {
   );
 }
 
-function Stars({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <svg
-          key={star}
-          className={clsx(
-            "h-4 w-4",
-            star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
-          )}
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.802 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.538 1.118l-2.802-2.034a1 1 0 00-1.175 0l-2.802 2.034c-.783.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-        </svg>
-      ))}
-    </div>
-  );
-}
+
 
 /********************* Page *********************/
 export default function CustomersPage() {
@@ -127,7 +111,9 @@ export default function CustomersPage() {
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
     null
   );
@@ -141,7 +127,9 @@ export default function CustomersPage() {
     address: "",
     creditLimit: 0,
     notes: "",
+    statusReason: "",
     customerType: "regular",
+    status: "active",
   });
 
   const loadCustomers = async () => {
@@ -178,8 +166,8 @@ export default function CustomersPage() {
       const matchesSearch = !term
         ? true
         : toStr(c.name).toLowerCase().includes(term) ||
-          toStr(c.phone).toLowerCase().includes(term) ||
-          toStr(c.email).toLowerCase().includes(term);
+        toStr(c.phone).toLowerCase().includes(term) ||
+        toStr(c.email).toLowerCase().includes(term);
       const matchesStatus = statusFilter === "all" || c.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
@@ -215,16 +203,16 @@ export default function CustomersPage() {
     setFilteredCustomers(filtered);
   }, [customers, searchTerm, statusFilter, sortBy, sortOrder]);
 
-  const toNum = (v: any) => (v === '' || v === null || v === undefined ? 0 : Number(v) || 0);
+
 
   // replace your current handleAddCustomer with this:
-  async function handleAddCustomer() {
+  async function handleSaveCustomer() {
     try {
       const toNum = (v: any) =>
         v === '' || v === null || v === undefined ? 0 : Number(v) || 0;
 
       // Send only fields the backend schema expects.
-      const payload = {
+      const payload: any = {
         name: (formData.name || '').trim(),
         phone: formData.phone?.trim() || undefined,
         email: formData.email?.trim() || undefined,
@@ -232,34 +220,72 @@ export default function CustomersPage() {
         creditLimit: toNum(formData.creditLimit),
         notes: formData.notes?.trim() || undefined,
         customerType: formData.customerType,
-        // status/rating are optional in backend and have defaults,
-        // so we omit them to avoid validation errors.
+        status: formData.status,
       };
+
+      if (formData.status === "permanent") {
+        payload.statusReason = formData.statusReason?.trim() || undefined;
+      }
 
       if (!payload.name) throw new Error('Name is required');
 
-      await api('/customers', {
-        method: 'POST',
-        body: payload, // api() handles JSON headers/stringify
-      });
+      if (editingCustomer) {
+        await api(`/customers/${editingCustomer.id}`, {
+          method: 'PUT',
+          body: payload,
+        });
+      } else {
+        await api('/customers', {
+          method: 'POST',
+          body: payload,
+        });
+      }
 
-      // reset/refresh UI — keep the same shape as initial formData
-      setShowAddModal(false);
-      setFormData({
-        name: '',
-        phone: '',
-        email: '',
-        address: '',
-        creditLimit: 0,
-        notes: '',
-        customerType: 'regular',
-      });
+      // reset/refresh UI
+      closeFormModal();
       await loadCustomers();
     } catch (err: any) {
-      console.error('Failed to add customer', err);
-      alert(err?.message || 'Failed to add customer');
+      console.error('Failed to save customer', err);
+      alert(err?.message || 'Failed to save customer');
     }
   }
+
+  const openAddModal = () => {
+    setEditingCustomer(null);
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      address: '',
+      creditLimit: 0,
+      notes: '',
+      statusReason: '',
+      customerType: 'regular',
+      status: 'active',
+    });
+    setShowFormModal(true);
+  };
+
+  const openEditModal = (c: Customer) => {
+    setEditingCustomer(c);
+    setFormData({
+      name: c.name,
+      phone: c.phone || '',
+      email: c.email || '',
+      address: c.address || '',
+      creditLimit: c.creditLimit,
+      notes: c.notes || '',
+      statusReason: c.statusReason || '',
+      customerType: c.customerType || 'regular',
+      status: c.status,
+    });
+    setShowFormModal(true);
+  };
+
+  const closeFormModal = () => {
+    setShowFormModal(false);
+    setEditingCustomer(null);
+  };
 
 
   const handleDeleteCustomer = async (id: string) => {
@@ -328,7 +354,7 @@ export default function CustomersPage() {
           </motion.button>
 
           <motion.button
-            onClick={() => setShowAddModal(true)}
+            onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -368,7 +394,7 @@ export default function CustomersPage() {
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
-            <option value="vip">VIP</option>
+            <option value="permanent">Permanent</option>
           </select>
 
           {/* Sort By */}
@@ -411,7 +437,7 @@ export default function CustomersPage() {
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
-              {customers.filter((c) => c.status === "vip").length}
+              {customers.filter((c) => c.customerType === "vip").length}
             </div>
             <div className="text-sm text-muted-foreground">VIP</div>
           </div>
@@ -422,10 +448,10 @@ export default function CustomersPage() {
             <div className="text-sm text-muted-foreground">Outstanding</div>
           </div>
         </div>
-      </motion.div>
+      </motion.div >
 
       {/* List */}
-      <AnimatePresence mode="wait">
+      < AnimatePresence mode="wait" >
         {viewMode === "table" ? (
           <TableView
             key="table"
@@ -434,6 +460,7 @@ export default function CustomersPage() {
               setSelectedCustomer(c);
               setShowDetailModal(true);
             }}
+            onEdit={openEditModal}
             onDelete={handleDeleteCustomer}
           />
         ) : (
@@ -444,22 +471,27 @@ export default function CustomersPage() {
               setSelectedCustomer(c);
               setShowDetailModal(true);
             }}
+            onEdit={openEditModal}
             onDelete={handleDeleteCustomer}
           />
-        )}
-      </AnimatePresence>
+        )
+        }
+      </AnimatePresence >
 
       {/* Modals */}
       <AnimatePresence>
-        {showAddModal && (
-          <AddCustomerModal
-            formData={formData}
-            setFormData={setFormData}
-            onSubmit={handleAddCustomer}
-            onClose={() => setShowAddModal(false)}
-          />
-        )}
-      </AnimatePresence>
+        {
+          showFormModal && (
+            <CustomerFormModal
+              isEditing={!!editingCustomer}
+              formData={formData}
+              setFormData={setFormData}
+              onSubmit={handleSaveCustomer}
+              onClose={closeFormModal}
+            />
+          )
+        }
+      </AnimatePresence >
 
       <AnimatePresence>
         {showDetailModal && selectedCustomer && (
@@ -469,7 +501,7 @@ export default function CustomersPage() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </div >
   );
 }
 
@@ -477,10 +509,12 @@ export default function CustomersPage() {
 function TableView({
   customers,
   onView,
+  onEdit,
   onDelete,
 }: {
   customers: Customer[];
   onView: (c: Customer) => void;
+  onEdit: (c: Customer) => void;
   onDelete: (id: string) => void;
 }) {
   return (
@@ -501,7 +535,7 @@ function TableView({
               <th className="text-left p-4 font-medium">Orders</th>
               <th className="text-left p-4 font-medium">Total Spent</th>
               <th className="text-left p-4 font-medium">Outstanding</th>
-              <th className="text-left p-4 font-medium">Rating</th>
+
               <th className="text-right p-4 font-medium">Actions</th>
             </tr>
           </thead>
@@ -573,15 +607,18 @@ function TableView({
                   </div>
                 </td>
                 <td className="p-4">
-                  <Stars rating={numOr0(c.rating)} />
-                </td>
-                <td className="p-4">
                   <div className="flex items-center justify-end gap-2">
                     <button
                       onClick={() => onView(c)}
                       className="p-2 hover:bg-accent rounded-lg transition-colors"
                     >
                       <Eye className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => onEdit(c)}
+                      className="p-2 hover:bg-accent rounded-lg transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                     </button>
                     <button
                       onClick={() => onDelete(c.id)}
@@ -604,10 +641,12 @@ function TableView({
 function GridView({
   customers,
   onView,
+  onEdit,
   onDelete,
 }: {
   customers: Customer[];
   onView: (c: Customer) => void;
+  onEdit: (c: Customer) => void;
   onDelete: (id: string) => void;
 }) {
   return (
@@ -637,6 +676,12 @@ function GridView({
                 className="p-2 hover:bg-accent rounded-lg transition-colors"
               >
                 <Eye className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => onEdit(c)}
+                className="p-2 hover:bg-accent rounded-lg transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
               </button>
               <button
                 onClick={() => onDelete(c.id)}
@@ -674,7 +719,7 @@ function GridView({
             </div>
 
             <div className="flex items-center justify-between pt-2">
-              <Stars rating={numOr0(c.rating)} />
+
               {c.outstandingBalance > 0 && (
                 <span className="text-sm text-red-600 font-medium">
                   Outstanding: {formatPKR(numOr0(c.outstandingBalance))}
@@ -689,7 +734,7 @@ function GridView({
 }
 
 /********************* Add Customer Modal *********************/
-function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
+function CustomerFormModal({ isEditing, formData, setFormData, onSubmit, onClose }: any) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -701,10 +746,12 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
-        className="w-full max-w-md card p-6"
+        className="w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">Add New Customer</h2>
+          <h2 className="text-xl font-semibold">
+            {isEditing ? "Edit Customer" : "Add New Customer"}
+          </h2>
           <button onClick={onClose} className="p-2 hover:bg-accent rounded-lg transition-colors">
             ✕
           </button>
@@ -715,10 +762,10 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
             e.preventDefault();
             onSubmit();
           }}
-          className="space-y-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
           <div>
-            <label className="block text-sm font-medium mb-2">Name *</label>
+            <label className="block text-sm font-medium mb-1">Name *</label>
             <input
               type="text"
               required
@@ -730,7 +777,7 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Phone</label>
+            <label className="block text-sm font-medium mb-1">Phone</label>
             <input
               type="tel"
               value={formData.phone}
@@ -741,7 +788,7 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
               value={formData.email}
@@ -752,30 +799,7 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Address</label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              placeholder="Delivery address"
-              rows={3}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Customer Type</label>
-            <select
-              value={formData.customerType}
-              onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="regular">Regular</option>
-              <option value="package">Package</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Credit Limit (Rs.)</label>
+            <label className="block text-sm font-medium mb-1">Credit Limit (Rs.)</label>
             <input
               type="number"
               value={formData.creditLimit}
@@ -787,8 +811,60 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
             />
           </div>
 
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">Address</label>
+            <input
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              placeholder="Delivery address"
+            />
+          </div>
+
+          {/* Type Logic */}
           <div>
-            <label className="block text-sm font-medium mb-2">Notes</label>
+            <label className="block text-sm font-medium mb-1">Customer Type</label>
+            <select
+              value={formData.customerType}
+              onChange={(e) => setFormData({ ...formData, customerType: e.target.value })}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="regular">Regular</option>
+              <option value="vip">VIP</option>
+            </select>
+          </div>
+
+          {/* Status Logic */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="permanent">Permanent (Deleted/Gone)</option>
+            </select>
+          </div>
+
+          {/* Conditional Note for Permanent Status */}
+          {formData.status === "permanent" && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1 text-red-600">Reason for Permanent Status *</label>
+              <input
+                required
+                type="text"
+                value={formData.statusReason}
+                onChange={(e) => setFormData({ ...formData, statusReason: e.target.value })}
+                className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 focus:ring-2 focus:ring-red-200 focus:border-red-500"
+                placeholder="Why is this customer permanently inactive?"
+              />
+            </div>
+          )}
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">Notes</label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -798,22 +874,24 @@ function AddCustomerModal({ formData, setFormData, onSubmit, onClose }: any) {
             />
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="md:col-span-2 flex justify-end gap-3 mt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
+              className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
             >
-              Add Customer
+              {isEditing ? "Update Customer" : "Add Customer"}
             </button>
           </div>
         </form>
+
+
       </motion.div>
     </motion.div>
   );
@@ -854,7 +932,7 @@ function CustomerDetailModal({
               <h2 className="text-xl font-semibold">{toStr(customer.name, "Unnamed")}</h2>
               <div className="flex items-center gap-2 mt-1">
                 <StatusBadge status={customer.status} />
-                <Stars rating={numOr0(customer.rating)} />
+
               </div>
             </div>
           </div>

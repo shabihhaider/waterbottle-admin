@@ -37,14 +37,15 @@ enum InvoiceStatus {
 
 enum CustomerType {
   REGULAR
-  PACKAGE
+  VIP
 }
 
 enum CustomerStatus {
   ACTIVE
   INACTIVE
-  VIP
+  PERMANENT
 }
+
 
 enum DeliveryStatus {
   SCHEDULED
@@ -81,6 +82,7 @@ model Customer {
   city     String? @db.VarChar(120)
   notes    String?
   urduName String? @db.VarChar(255)
+  statusReason String?
 
   // UI fields
   status      CustomerStatus @default(ACTIVE)
