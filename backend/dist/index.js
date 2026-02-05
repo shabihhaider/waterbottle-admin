@@ -26,8 +26,8 @@ process.on('uncaughtException', (e) => {
 });
 const PORT = Number(env_1.env.PORT || 5050);
 const FRONTEND_ORIGIN = env_1.env.FRONTEND_ORIGIN || 'http://localhost:3000';
-const FRONTEND_ORIGIN_ALT = env_1.env.FRONTEND_ORIGIN_ALT || 'http://127.0.0.1:3000';
-const FRONTEND_ORIGIN_PROD = process.env.FRONTEND_ORIGIN_PROD;
+const FRONTEND_ORIGIN_ALT = env_1.env.FRONTEND_ORIGIN_ALT || 'http://localhost:5173';
+const FRONTEND_ORIGIN_PROD = process.env.FRONTEND_ORIGIN_PROD || 'https://waterbottle-admin.vercel.app';
 console.log('Booting API with env:', { PORT, FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT });
 const app = (0, express_1.default)();
 app.use((0, helmet_1.default)({ crossOriginResourcePolicy: false }));
@@ -38,13 +38,17 @@ app.use((0, cors_1.default)({
     origin(origin, cb) {
         if (!origin)
             return cb(null, true);
-        const allowed = [FRONTEND_ORIGIN, FRONTEND_ORIGIN_ALT, FRONTEND_ORIGIN_PROD].filter(Boolean);
-        cb(null, allowed.includes(origin));
+        const allowedPattern = /\.vercel\.app$/;
+        if (allowedPattern.test(origin) || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+            cb(null, true);
+        }
+        else {
+            console.warn('❌ Blocked CORS request from:', origin);
+            cb(new Error('Not allowed by CORS'));
+        }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-    exposedHeaders: ['Content-Disposition'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Debug-User', 'X-Debug-Email'],
 }));
 app.options('*', (0, cors_1.default)());
 app.get('/health', (_req, res) => {

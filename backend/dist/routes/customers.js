@@ -6,7 +6,8 @@ const prisma_1 = require("../prisma");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 router.use(auth_1.requireAuth);
-const StatusUI = zod_1.z.enum(['active', 'inactive', 'vip']);
+const StatusUI = zod_1.z.enum(['active', 'inactive', 'permanent']);
+const CustomerTypeUI = zod_1.z.enum(['regular', 'vip']);
 const customerSchema = zod_1.z.object({
     name: zod_1.z.string().min(2),
     phone: zod_1.z.string().optional(),
@@ -14,13 +15,17 @@ const customerSchema = zod_1.z.object({
     address: zod_1.z.string().optional(),
     city: zod_1.z.string().optional(),
     notes: zod_1.z.string().optional(),
+    statusReason: zod_1.z.string().optional(),
     urduName: zod_1.z.string().optional(),
     status: StatusUI.optional(),
     rating: zod_1.z.coerce.number().int().min(0).max(5).optional(),
     creditLimit: zod_1.z.coerce.number().nonnegative().optional(),
+    customerType: CustomerTypeUI.optional(),
 });
 const toDbStatus = (s) => s ? s.toUpperCase() : undefined;
 const toUiStatus = (s) => s.toLowerCase();
+const toDbCustomerType = (t) => t ? t.toUpperCase() : undefined;
+const toUiCustomerType = (t) => t.toLowerCase();
 function shapeCustomer(c, orderCount, lastOrderAt, spent, outstanding) {
     return {
         id: c.id,
@@ -32,9 +37,11 @@ function shapeCustomer(c, orderCount, lastOrderAt, spent, outstanding) {
         totalSpent: spent,
         lastOrderDate: lastOrderAt ? new Date(lastOrderAt).toISOString() : undefined,
         status: toUiStatus(c.status),
-        rating: c.rating ?? 0,
+        customerType: toUiCustomerType(c.customerType),
+        rating: 0,
         joinDate: new Date(c.createdAt).toISOString(),
         notes: c.notes ?? undefined,
+        statusReason: c.statusReason ?? undefined,
         creditLimit: Number(c.creditLimit ?? 0),
         outstandingBalance: outstanding,
     };
@@ -104,10 +111,12 @@ router.post('/', async (req, res, next) => {
                 address: d.address ?? null,
                 city: d.city ?? null,
                 notes: d.notes ?? null,
+                statusReason: d.statusReason ?? null,
                 urduName: d.urduName ?? null,
                 status: toDbStatus(d.status) ?? 'ACTIVE',
-                rating: d.rating ?? 0,
+                rating: 0,
                 creditLimit: d.creditLimit ?? 0,
+                customerType: toDbCustomerType(d.customerType) ?? 'REGULAR',
             },
         });
         res.json(created);
@@ -131,10 +140,12 @@ router.put('/:id', async (req, res, next) => {
                 ...(d.address !== undefined ? { address: d.address ?? null } : {}),
                 ...(d.city !== undefined ? { city: d.city ?? null } : {}),
                 ...(d.notes !== undefined ? { notes: d.notes ?? null } : {}),
+                ...(d.statusReason !== undefined ? { statusReason: d.statusReason ?? null } : {}),
                 ...(d.urduName !== undefined ? { urduName: d.urduName ?? null } : {}),
                 ...(d.status !== undefined ? { status: toDbStatus(d.status) } : {}),
                 ...(d.rating !== undefined ? { rating: d.rating } : {}),
                 ...(d.creditLimit !== undefined ? { creditLimit: d.creditLimit } : {}),
+                ...(d.customerType !== undefined ? { customerType: toDbCustomerType(d.customerType) } : {}),
             },
         });
         res.json(updated);
