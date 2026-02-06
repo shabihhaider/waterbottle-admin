@@ -23,7 +23,9 @@ interface OrderItem {
   quantity: number;
   unitPrice: number;
   product?: { id: string; name: string };
+  isCustomPrice?: boolean;
 }
+
 
 interface Order {
   id: string;
@@ -36,7 +38,13 @@ interface Order {
   createdAt?: string;
 }
 
-interface Customer { id: string; name: string }
+interface Customer {
+  id: string;
+  name: string;
+  status?: string;
+  customerPrices?: { productId: string; price: number }[];
+}
+
 interface Product { id: string; name: string; salePrice: number }
 
 /********************* Safe helpers *********************/
@@ -109,6 +117,18 @@ export default function OrdersPage() {
   const addItem = () => {
     const prod = products.find((p) => p.id === productId);
     if (!prod || qty <= 0) return;
+    let finalPrice = numOr0(prod.salePrice);
+    let isCustom = false;
+
+    if (customerId) {
+      const cust = customers.find(c => c.id === customerId);
+      const cp = cust?.customerPrices?.find(p => p.productId === prod.id);
+      if (cp) {
+        finalPrice = numOr0(cp.price);
+        isCustom = true;
+      }
+    }
+
     setItems((prev) => {
       const idx = prev.findIndex((i) => i.productId === prod.id);
       if (idx >= 0) {
@@ -118,12 +138,19 @@ export default function OrdersPage() {
       }
       return [
         ...prev,
-        { productId: prod.id, quantity: qty, unitPrice: numOr0(prod.salePrice), product: { id: prod.id, name: prod.name } },
+        {
+          productId: prod.id,
+          quantity: qty,
+          unitPrice: finalPrice,
+          product: { id: prod.id, name: prod.name },
+          isCustomPrice: isCustom
+        },
       ];
     });
     setProductId("");
     setQty(1);
   };
+
 
   const removeItem = (pid: string) => setItems((prev) => prev.filter((i) => i.productId !== pid));
 
@@ -132,31 +159,31 @@ export default function OrdersPage() {
     [items]
   );
 
-// replace your current `create` with this
-const create = async () => {
-  if (!customerId || items.length === 0) return alert("Pick a customer and add at least one item.");
-  try {
-    await api("/orders", {
-      method: "POST",
-      // IMPORTANT: pass a plain object (not JSON.stringify)
-      body: {
-        customerId,
-        items: items.map(({ productId, quantity, unitPrice }) => ({
-          productId,
-          quantity,
-          unitPrice,
-        })),
-      },
-    });
-    setShowCreateModal(false);
-    setCustomerId("");
-    setItems([]);
-    await load();
-  } catch (e: any) {
-    console.error("Failed to create order", e);
-    alert(e?.message || "Failed to create order. Please try again.");
-  }
-};
+  // replace your current `create` with this
+  const create = async () => {
+    if (!customerId || items.length === 0) return alert("Pick a customer and add at least one item.");
+    try {
+      await api("/orders", {
+        method: "POST",
+        // IMPORTANT: pass a plain object (not JSON.stringify)
+        body: {
+          customerId,
+          items: items.map(({ productId, quantity, unitPrice }) => ({
+            productId,
+            quantity,
+            unitPrice,
+          })),
+        },
+      });
+      setShowCreateModal(false);
+      setCustomerId("");
+      setItems([]);
+      await load();
+    } catch (e: any) {
+      console.error("Failed to create order", e);
+      alert(e?.message || "Failed to create order. Please try again.");
+    }
+  };
 
 
   /********** Filters & sorting **********/
@@ -363,9 +390,10 @@ function CreateOrderModal({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary">
             <option value="">Select Customer</option>
-            {(customers ?? []).map((c: any) => (
+            {(customers ?? []).filter((c: any) => c.status === 'active').map((c: any) => (
               <option key={c.id} value={c.id}>{toStr(c.name, "Unnamed")}</option>
             ))}
+
           </select>
 
           <select value={productId} onChange={(e) => setProductId(e.target.value)} className="px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary">
@@ -403,8 +431,14 @@ function CreateOrderModal({
                     <tr key={i.productId} className="border-t border-border">
                       <td className="p-3">{toStr(i.product?.name, "Item")}</td>
                       <td className="p-3">{fmtInt(i.quantity)}</td>
-                      <td className="p-3">{formatPKR(numOr0(i.unitPrice))}</td>
+                      <td className="p-3">
+                        {formatPKR(numOr0(i.unitPrice))}
+                        {i.isCustomPrice && (
+                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">Custom</span>
+                        )}
+                      </td>
                       <td className="p-3 font-medium">{formatPKR(numOr0(i.quantity) * numOr0(i.unitPrice))}</td>
+
                       <td className="p-3 text-right">
                         <button onClick={() => removeItem(i.productId)} className="px-3 py-1 text-sm rounded-lg hover:bg-destructive/10 text-destructive">Remove</button>
                       </td>

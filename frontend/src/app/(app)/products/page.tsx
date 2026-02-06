@@ -168,8 +168,8 @@ export default function ProductsPage() {
       const matchesSearch = !term
         ? true
         : toStr(p.name).toLowerCase().includes(term) ||
-          toStr(p.sku).toLowerCase().includes(term) ||
-          toStr(p.category).toLowerCase().includes(term);
+        toStr(p.sku).toLowerCase().includes(term) ||
+        toStr(p.category).toLowerCase().includes(term);
 
       const isLow = p.stock <= p.lowStockLevel && p.stock > 0;
       const isOut = p.stock <= 0;
@@ -310,6 +310,7 @@ export default function ProductsPage() {
               placeholder="Search SKU, name or category..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search products"
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
@@ -453,7 +454,7 @@ function GridView({ products }: { products: Product[] }) {
         const low = p.stock <= p.lowStockLevel && p.stock > 0;
         const out = p.stock <= 0;
         return (
-          <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }} className={clsx("card p-5 card-hover", out && "ring-2 ring-red-200 dark:ring-red-800", low && !out && "ring-2 ring-orange-200 dark:ring-orange-800")}> 
+          <motion.div key={p.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} whileHover={{ y: -4 }} className={clsx("card p-5 card-hover", out && "ring-2 ring-red-200 dark:ring-red-800", low && !out && "ring-2 ring-orange-200 dark:ring-orange-800")}>
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="text-xs font-mono text-muted-foreground">{toStr(p.sku, "-")}</div>
@@ -475,9 +476,9 @@ function GridView({ products }: { products: Product[] }) {
                 <div className="text-xs text-green-600/80">Sale Price</div>
                 <div className="font-semibold text-green-600">{formatPKR(numOr0(p.salePrice))}</div>
               </div>
-              <div className="bg-purple-50 dark:bg-purple-950 p-3 rounded-lg">
-                <div className="text-xs text-purple-600/80">Updated</div>
-                <div className="font-semibold text-purple-600">{dateLabel(p.updatedAt)}</div>
+              <div className="bg-teal-50 dark:bg-teal-950 p-3 rounded-lg">
+                <div className="text-xs text-teal-600/80">Updated</div>
+                <div className="font-semibold text-teal-600">{dateLabel(p.updatedAt)}</div>
               </div>
             </div>
           </motion.div>

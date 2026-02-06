@@ -4,8 +4,8 @@ import { api } from '@/lib/api';
 import { formatPKR } from '@/lib/utils';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, TrendingDown, DollarSign, Users, Package, Truck, 
+import {
+  TrendingUp, TrendingDown, DollarSign, Users, Package, Truck,
   AlertTriangle, Clock, CheckCircle, Calendar, Droplets, Target,
   ArrowUpRight, ArrowDownRight, Eye, RefreshCw
 } from 'lucide-react';
@@ -135,8 +135,8 @@ export default function Dashboard() {
       change: -12,
       changeLabel: 'vs yesterday',
       icon: Truck,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50 dark:bg-purple-950',
+      color: 'text-teal-600',
+      bgColor: 'bg-teal-50 dark:bg-teal-950',
       urgent: data.pendingDeliveries > 10
     },
     {
@@ -163,7 +163,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 fade-in max-w-8xl">
       {/* Header */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
@@ -174,7 +174,7 @@ export default function Dashboard() {
           </h1>
           <p className="text-muted-foreground mt-1">Water delivery business overview</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <motion.button
             onClick={handleRefresh}
@@ -186,7 +186,7 @@ export default function Dashboard() {
             <RefreshCw className={clsx('h-4 w-4', refreshing && 'animate-spin')} />
             <span className="hidden sm:inline">Refresh</span>
           </motion.button>
-          
+
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
@@ -231,7 +231,7 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          
+
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={(data.monthly ?? []).map(d => ({
@@ -241,19 +241,19 @@ export default function Dashboard() {
               }))}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="ordersGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  contentStyle={{ 
+                <Tooltip
+                  contentStyle={{
                     backgroundColor: 'hsl(var(--popover))',
                     border: '1px solid hsl(var(--border))',
                     borderRadius: '8px'
@@ -316,7 +316,7 @@ export default function Dashboard() {
             {(data.ordersByStatus ?? []).map((status, index) => (
               <div key={`${status.status}-${index}`} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className="w-3 h-3 rounded-full"
                     style={{ backgroundColor: COLORS[index % COLORS.length] }}
                   />
@@ -380,7 +380,7 @@ export default function Dashboard() {
               View All
             </button>
           </div>
-          
+
           <div className="space-y-4 max-h-80 overflow-y-auto">
             {(data.recentActivity ?? []).map((activity, index) => (
               <motion.div
@@ -424,8 +424,8 @@ export default function Dashboard() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
               <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip 
-                contentStyle={{ 
+              <Tooltip
+                contentStyle={{
                   backgroundColor: 'hsl(var(--popover))',
                   border: '1px solid hsl(var(--border))',
                   borderRadius: '8px'
@@ -470,7 +470,7 @@ function StatCard({ stat, index }: { stat: any; index: number }) {
           <div className="flex-1">
             <p className="text-sm font-medium text-muted-foreground mb-1">{stat.title}</p>
             <p className="text-2xl font-bold mb-2">{toStr(stat.value, 'N/A')}</p>
-            
+
             {change !== 0 && (
               <div className="flex items-center gap-1 text-sm">
                 {isPositive ? (
@@ -489,7 +489,7 @@ function StatCard({ stat, index }: { stat: any; index: number }) {
               </div>
             )}
           </div>
-          
+
           <div className={clsx('p-3 rounded-xl', stat.bgColor)}>
             <Icon className={clsx('h-6 w-6', stat.color)} />
           </div>
@@ -516,10 +516,10 @@ function StatCard({ stat, index }: { stat: any; index: number }) {
           <div className="mt-4 h-8">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stat.trend.map((t: any) => ({ total: numOr0(t?.total) }))}>
-                <Line 
-                  type="monotone" 
-                  dataKey="total" 
-                  stroke={isPositive ? '#10b981' : '#ef4444'} 
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke={isPositive ? '#10b981' : '#ef4444'}
                   strokeWidth={2}
                   dot={false}
                 />
@@ -539,7 +539,7 @@ function SkeletonDashboard() {
         <div className="h-8 w-48 bg-muted rounded" />
         <div className="h-10 w-32 bg-muted rounded" />
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="card p-6">
@@ -554,7 +554,7 @@ function SkeletonDashboard() {
           </div>
         ))}
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card p-6 h-96" />
         <div className="card p-6 h-96" />

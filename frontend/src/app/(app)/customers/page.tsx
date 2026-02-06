@@ -36,7 +36,15 @@ interface Customer {
   creditLimit: number;
   outstandingBalance: number;
   customerType?: "regular" | "vip";
+  customerPrices: { productId: string; price: number }[];
 }
+
+interface Product {
+  id: string;
+  name: string;
+  salePrice: number;
+}
+
 
 /********************* Safe helpers *********************/
 const toStr = (v: unknown, fb = ""): string =>
@@ -59,6 +67,7 @@ const EMPTY_CUSTOMER: Customer = {
   creditLimit: 0,
   outstandingBalance: 0,
   customerType: "regular",
+  customerPrices: [],
 };
 
 const sanitizeCustomer = (c: Partial<Customer> | undefined | null): Customer => ({
@@ -79,7 +88,9 @@ const sanitizeCustomer = (c: Partial<Customer> | undefined | null): Customer => 
   creditLimit: numOr0(c?.creditLimit),
   outstandingBalance: numOr0(c?.outstandingBalance),
   customerType: c?.customerType === "vip" ? "vip" : "regular",
+  customerPrices: Array.isArray(c?.customerPrices) ? c!.customerPrices : [],
 });
+
 
 /********************* UI Helpers (single source) *********************/
 function StatusBadge({ status }: { status: Customer["status"] }) {
@@ -102,7 +113,9 @@ function StatusBadge({ status }: { status: Customer["status"] }) {
 /********************* Page *********************/
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(null);
 
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
@@ -130,16 +143,22 @@ export default function CustomersPage() {
     statusReason: "",
     customerType: "regular",
     status: "active",
+    customerPrices: [] as { productId: string; price: number }[],
   });
 
   const loadCustomers = async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api<Customer[]>("/customers");
-      const safe = Array.isArray(res) ? res.map(sanitizeCustomer) : [];
+      const [cRes, pRes] = await Promise.all([
+        api<Customer[]>("/customers"),
+        api<Product[]>("/products")
+      ]);
+      const safe = Array.isArray(cRes) ? cRes.map(sanitizeCustomer) : [];
       setCustomers(safe);
+      setProducts(Array.isArray(pRes) ? pRes : []);
     } catch (e: any) {
+
       setError(e?.message ?? "Failed to load customers");
       setCustomers([]);
     } finally {
@@ -221,7 +240,9 @@ export default function CustomersPage() {
         notes: formData.notes?.trim() || undefined,
         customerType: formData.customerType,
         status: formData.status,
+        customerPrices: formData.customerPrices,
       };
+
 
       if (formData.status === "permanent") {
         payload.statusReason = formData.statusReason?.trim() || undefined;
@@ -262,7 +283,9 @@ export default function CustomersPage() {
       statusReason: '',
       customerType: 'regular',
       status: 'active',
+      customerPrices: [],
     });
+
     setShowFormModal(true);
   };
 
@@ -278,7 +301,9 @@ export default function CustomersPage() {
       statusReason: c.statusReason || '',
       customerType: c.customerType || 'regular',
       status: c.status,
+      customerPrices: c.customerPrices || [],
     });
+
     setShowFormModal(true);
   };
 
@@ -381,6 +406,7 @@ export default function CustomersPage() {
               placeholder="Search customers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Search customers"
               className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
@@ -390,6 +416,7 @@ export default function CustomersPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            aria-label="Filter by Status"
           >
             <option value="all">All Status</option>
             <option value="active">Active</option>
@@ -402,6 +429,7 @@ export default function CustomersPage() {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             className="px-3 py-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            aria-label="Sort Customers"
           >
             <option value="name">Sort by Name</option>
             <option value="totalSpent">Sort by Spending</option>
@@ -436,7 +464,7 @@ export default function CustomersPage() {
             <div className="text-sm text-muted-foreground">Active</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-amber-600">
               {customers.filter((c) => c.customerType === "vip").length}
             </div>
             <div className="text-sm text-muted-foreground">VIP</div>
@@ -486,10 +514,12 @@ export default function CustomersPage() {
               isEditing={!!editingCustomer}
               formData={formData}
               setFormData={setFormData}
+              products={products}
               onSubmit={handleSaveCustomer}
               onClose={closeFormModal}
             />
           )
+
         }
       </AnimatePresence >
 
@@ -611,18 +641,21 @@ function TableView({
                     <button
                       onClick={() => onView(c)}
                       className="p-2 hover:bg-accent rounded-lg transition-colors"
+                      aria-label="View Details"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => onEdit(c)}
                       className="p-2 hover:bg-accent rounded-lg transition-colors"
+                      aria-label="Edit Customer"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pencil"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
                     </button>
                     <button
                       onClick={() => onDelete(c.id)}
                       className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
+                      aria-label="Delete Customer"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -734,8 +767,28 @@ function GridView({
 }
 
 /********************* Add Customer Modal *********************/
-function CustomerFormModal({ isEditing, formData, setFormData, onSubmit, onClose }: any) {
+function CustomerFormModal({ isEditing, formData, setFormData, onSubmit, onClose, products }: any) {
+  const addPrice = () => {
+    setFormData({
+      ...formData,
+      customerPrices: [...formData.customerPrices, { productId: "", price: 0 }]
+    });
+  };
+
+  const removePrice = (index: number) => {
+    const newPrices = [...formData.customerPrices];
+    newPrices.splice(index, 1);
+    setFormData({ ...formData, customerPrices: newPrices });
+  };
+
+  const updatePrice = (index: number, field: string, value: any) => {
+    const newPrices = [...formData.customerPrices];
+    newPrices[index] = { ...newPrices[index], [field]: value };
+    setFormData({ ...formData, customerPrices: newPrices });
+  };
+
   return (
+
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -797,6 +850,53 @@ function CustomerFormModal({ isEditing, formData, setFormData, onSubmit, onClose
               placeholder="customer@email.com"
             />
           </div>
+
+          <div className="md:col-span-2 mt-4 pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium">Custom Product Pricing</h3>
+              <button type="button" onClick={addPrice} className="text-sm text-primary hover:underline flex items-center gap-1">
+                <Plus className="h-3 w-3" /> Add Price
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {formData.customerPrices.map((cp: any, idx: number) => (
+                <div key={idx} className="flex gap-2 items-center">
+                  <select
+                    className="flex-1 px-3 py-2 border border-border rounded-lg bg-background"
+                    value={cp.productId}
+                    onChange={(e) => updatePrice(idx, 'productId', e.target.value)}
+                    required
+                  >
+                    <option value="">Select Product...</option>
+                    {products.map((p: any) => (
+                      <option key={p.id} value={p.id} disabled={formData.customerPrices.some((existing: any, i: number) => i !== idx && existing.productId === p.id)}>
+                        {p.name} (Default: {formatPKR(p.salePrice)})
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="number"
+                    className="w-32 px-3 py-2 border border-border rounded-lg bg-background"
+                    placeholder="Price"
+                    value={cp.price}
+                    onChange={(e) => updatePrice(idx, 'price', parseFloat(e.target.value))}
+                    required
+                    min="0"
+                  />
+
+                  <button type="button" onClick={() => removePrice(idx)} className="p-2 text-destructive hover:bg-destructive/10 rounded-lg">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              {formData.customerPrices.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">No custom prices allowed.</p>
+              )}
+            </div>
+          </div>
+
 
           <div>
             <label className="block text-sm font-medium mb-1">Credit Limit (Rs.)</label>

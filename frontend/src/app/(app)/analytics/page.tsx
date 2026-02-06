@@ -195,8 +195,8 @@ export default function AnalyticsPage() {
       value: formatPKR(num(data.kpis.aov)),
       change: 0,
       icon: Activity,
-      color: "text-purple-600",
-      bg: "bg-purple-50 dark:bg-purple-950",
+      color: "text-teal-600",
+      bg: "bg-teal-50 dark:bg-teal-950",
     },
     {
       title: "Conversion",
@@ -445,7 +445,7 @@ export default function AnalyticsPage() {
               </span>
             </li>
             <li className="flex items-start gap-2">
-              <TrendingUp className="h-4 w-4 text-purple-600 mt-0.5" />
+              <TrendingUp className="h-4 w-4 text-teal-600 mt-0.5" />
               <span>
                 Channel leading orders: <strong>{toStr(data.channels?.[0]?.channel, "—")}</strong>.
               </span>
@@ -484,7 +484,7 @@ function KpiCard({ k, index }: { k: any; index: number }) {
   const pos = change > 0;
   const neg = change < 0;
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }} whileHover={{ y: -4 }} className={clsx("card p-6 relative overflow-hidden")}>      
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.08 }} whileHover={{ y: -4 }} className={clsx("card p-6 relative overflow-hidden")}>
       <div className="absolute inset-0 opacity-5"><div className={clsx("w-full h-full", k.bg)} /></div>
       <div className="relative flex items-start justify-between">
         <div className="flex-1">

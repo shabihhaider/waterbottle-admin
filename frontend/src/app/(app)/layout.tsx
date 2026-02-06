@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LogOut, LayoutDashboard, Users, Package, ShoppingCart, FileText, Settings, 
-  X, Menu, Bell, Search, Droplets, TrendingUp, AlertTriangle 
+import {
+  LogOut, LayoutDashboard, Users, Package, ShoppingCart, FileText, Settings,
+  X, Menu, Bell, Search, Droplets, TrendingUp, AlertTriangle
 } from 'lucide-react';
 import clsx from 'clsx';
 import Header from '@/components/Header';
@@ -14,7 +14,7 @@ import Header from '@/components/Header';
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, color: 'text-blue-600' },
   { href: '/customers', label: 'Customers', icon: Users, color: 'text-green-600' },
-  { href: '/products', label: 'Inventory', icon: Package, color: 'text-purple-600' },
+  { href: '/products', label: 'Inventory', icon: Package, color: 'text-teal-600' },
   { href: '/orders', label: 'Orders', icon: ShoppingCart, color: 'text-orange-600' },
   { href: '/invoices', label: 'Invoices', icon: FileText, color: 'text-indigo-600' },
   { href: '/delivery', label: 'Delivery', icon: Droplets, color: 'text-cyan-600' },
@@ -35,8 +35,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     if (!token) router.replace('/login'); else setOk(true);
   }, [router]);
 
-  useEffect(() => { 
-    setMobileOpen(false); 
+  useEffect(() => {
+    setMobileOpen(false);
     // Simulate loading new page
     document.body.style.overflow = 'hidden';
     setTimeout(() => {
@@ -92,7 +92,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         </motion.div>
-        
+
         <button
           onClick={() => setCollapsed(v => !v)}
           className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg hover:bg-sidebar-accent/50 transition-colors"
@@ -105,7 +105,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Menu className="h-4 w-4" />
           </motion.div>
         </button>
-        
+
         <button
           onClick={() => setMobileOpen(false)}
           className="md:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-sidebar-accent/50 transition-colors"
@@ -121,7 +121,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           {nav.map((item, index) => {
             const Icon = item.icon;
             const active = pathname?.startsWith(item.href);
-            
+
             return (
               <motion.div
                 key={item.href}
@@ -134,13 +134,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   className={clsx(
                     'group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all duration-200',
                     'hover:bg-sidebar-accent/70 hover:shadow-sm hover:scale-[1.02]',
-                    active 
-                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary shadow-sm ring-1 ring-primary/20' 
+                    active
+                      ? 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary shadow-sm ring-1 ring-primary/20'
                       : 'text-sidebar-foreground/80 hover:text-sidebar-foreground'
                   )}
                 >
                   <Icon className={clsx('h-5 w-5 transition-colors', active ? item.color : 'text-current')} />
-                  
+
                   <motion.span
                     initial={false}
                     animate={{ opacity: collapsed ? 0 : 1, x: collapsed ? -10 : 0 }}
@@ -149,7 +149,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   >
                     {item.label}
                   </motion.span>
-                  
+
                   {active && (
                     <motion.div
                       layoutId="nav-indicator"
@@ -157,7 +157,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     />
                   )}
-                  
+
                   {/* Tooltip for collapsed state */}
                   {collapsed && (
                     <div className="absolute left-full ml-2 px-2 py-1 bg-popover text-popover-foreground text-sm rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 whitespace-nowrap">
@@ -236,7 +236,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            
+
             <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
               <span>Welcome back,</span>
               <span className="font-medium text-foreground">Admin</span>
@@ -284,15 +284,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         {/* Content */}
         <main className="flex-1 relative">
           <div className="absolute inset-0 -z-10 app-gradient opacity-30" />
-          
+
           <AnimatePresence mode="wait">
             <motion.div
               key={pathname}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ 
-                duration: 0.3, 
+              transition={{
+                duration: 0.3,
                 ease: [0.25, 0.25, 0, 1],
                 scale: { duration: 0.2 }
               }}

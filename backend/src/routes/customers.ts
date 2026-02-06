@@ -22,7 +22,9 @@ type CustomerModel = {
   statusReason: string | null;
   creditLimit: unknown; // Prisma.Decimal | number; we coerce with Number()
   customerType: DbCustomerType;
+  customerPrices?: { productId: string; price: unknown }[];
 };
+
 
 
 
@@ -45,12 +47,17 @@ const customerSchema = z.object({
   rating: z.coerce.number().int().min(0).max(5).optional(),
   creditLimit: z.coerce.number().nonnegative().optional(),
   customerType: CustomerTypeUI.optional(),
+  customerPrices: z.array(z.object({
+    productId: z.string(),
+    price: z.coerce.number().nonnegative()
+  })).optional(),
 });
 
+
 const toDbStatus = (s?: z.infer<typeof StatusUI>): DbCustomerStatus | undefined =>
-   s ? (s.toUpperCase() as DbCustomerStatus) : undefined;
- const toUiStatus = (s: DbCustomerStatus) =>
-   s.toLowerCase() as CustomerStatusUI;
+  s ? (s.toUpperCase() as DbCustomerStatus) : undefined;
+const toUiStatus = (s: DbCustomerStatus) =>
+  s.toLowerCase() as CustomerStatusUI;
 
 const toDbCustomerType = (t?: z.infer<typeof CustomerTypeUI>): DbCustomerType | undefined =>
   t ? (t.toUpperCase() as DbCustomerType) : undefined;
@@ -84,15 +91,20 @@ function shapeCustomer(
     statusReason: c.statusReason ?? undefined,
     creditLimit: Number(c.creditLimit ?? 0),
     outstandingBalance: outstanding,
+    customerPrices: c.customerPrices?.map(cp => ({
+      productId: cp.productId,
+      price: Number(cp.price)
+    })) ?? [],
   };
 }
+
 
 // GET /api/customers?q=
 router.get('/', async (req, res, next) => {
   try {
     const { q } = req.query as { q?: string };
     const where = q
-    ? {
+      ? {
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
           { phone: { contains: q } },
@@ -101,7 +113,12 @@ router.get('/', async (req, res, next) => {
       }
       : {} as any;
 
-    const customers = await prisma.customer.findMany({ where, orderBy: { createdAt: 'desc' } });
+    const customers = await prisma.customer.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { customerPrices: true }
+    });
+
     if (customers.length === 0) return res.json([]);
 
     const ids = customers.map((c) => c.id);
@@ -137,7 +154,11 @@ router.get('/', async (req, res, next) => {
 // GET /api/customers/:id
 router.get('/:id', async (req, res, next) => {
   try {
-    const c = await prisma.customer.findUnique({ where: { id: req.params.id } });
+    const c = await prisma.customer.findUnique({
+      where: { id: req.params.id },
+      include: { customerPrices: true }
+    });
+
     if (!c) return res.status(404).json({ message: 'Not found' });
 
     const [ordersAgg, lastOrderAgg, invSpentAgg, invOutstandingAgg] = await Promise.all([
@@ -182,8 +203,16 @@ router.post('/', async (req, res, next) => {
         rating: 0, // Default to 0
         creditLimit: d.creditLimit ?? 0,
         customerType: toDbCustomerType(d.customerType) ?? 'REGULAR',
+        customerPrices: {
+          create: d.customerPrices?.map(cp => ({
+            productId: cp.productId,
+            price: cp.price
+          }))
+        }
       },
+      include: { customerPrices: true }
     });
+
     res.json(created);
   } catch (err) {
     next(err);
@@ -214,7 +243,27 @@ router.put('/:id', async (req, res, next) => {
         ...(d.customerType !== undefined ? { customerType: toDbCustomerType(d.customerType) } : {}),
       },
     });
-    res.json(updated);
+
+    if (d.customerPrices) {
+      // Replace all existing prices
+      await prisma.$transaction([
+        prisma.customerPrice.deleteMany({ where: { customerId: req.params.id } }),
+        prisma.customerPrice.createMany({
+          data: d.customerPrices.map(cp => ({
+            customerId: req.params.id,
+            productId: cp.productId,
+            price: cp.price
+          }))
+        })
+      ]);
+    }
+
+    const final = await prisma.customer.findUnique({
+      where: { id: req.params.id },
+      include: { customerPrices: true }
+    });
+    res.json(final);
+
   } catch (err) {
     next(err);
   }
